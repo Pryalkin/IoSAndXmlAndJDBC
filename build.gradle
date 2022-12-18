@@ -2,6 +2,12 @@ plugins {
     id 'java'
 }
 
+sourceSets {
+   main{
+       output.resourcesDir = 'build/classes/java/main/resources'
+   }
+}
+
 group 'org.example'
 version '1.0-SNAPSHOT'
 
