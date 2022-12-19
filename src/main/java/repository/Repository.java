@@ -3,13 +3,13 @@ package repository;
 import model.DiscountCard;
 import model.Product;
 
+import java.util.Map;
 import java.util.Optional;
 
-public interface Repository {
-    Product saveProduct(Product product);
-    DiscountCard saveDiscountCard(DiscountCard discountCard);
+public interface Repository <T, V>{
 
-    Optional<Product> getByIdProduct(long id);
+    T save(T t);
+    Map<V, T> getAll();
+    Optional<T> getById(V v);
 
-    Optional<DiscountCard> getByNameDiscountCard(String numberCard);
 }

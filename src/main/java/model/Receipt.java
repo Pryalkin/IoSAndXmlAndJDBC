@@ -10,13 +10,11 @@ public class Receipt {
     private DiscountCard discountCard;
     private Date createDate;
 
-    public Receipt(List<ProductWarehouse> productWarehouses, DiscountCard discountCard, Date createDate) {
-        this.productWarehouses = productWarehouses;
-        this.discountCard = discountCard;
-        this.createDate = createDate;
-    }
-
-    public Receipt() {
+    private Receipt(Builder builder) {
+        this.id = builder.id;
+        this.productWarehouses = builder.productWarehouses;
+        this.discountCard = builder.discountCard;
+        this.createDate = builder.createDate;
     }
 
     public Long getId() {
@@ -31,24 +29,12 @@ public class Receipt {
         return productWarehouses;
     }
 
-    public void setProductWarehouses(List<ProductWarehouse> productWarehouses) {
-        this.productWarehouses = productWarehouses;
-    }
-
     public DiscountCard getDiscountCard() {
         return discountCard;
     }
 
-    public void setDiscountCard(DiscountCard discountCard) {
-        this.discountCard = discountCard;
-    }
-
     public Date getCreateDate() {
         return createDate;
-    }
-
-    public void setCreateDate(Date createDate) {
-        this.createDate = createDate;
     }
 
     @Override
@@ -60,4 +46,47 @@ public class Receipt {
                 ", createDate=" + createDate +
                 '}';
     }
+
+    public static class Builder{
+
+        private Long id = 0L;
+        private List<ProductWarehouse> productWarehouses;
+        private DiscountCard discountCard;
+        private Date createDate;
+
+        public Builder(Receipt receipt) {
+            this.id = receipt.id;
+            this.productWarehouses = receipt.productWarehouses;
+            this.discountCard = receipt.discountCard;
+            this.createDate = receipt.createDate;
+        }
+
+        public Builder() {
+        }
+
+        public Builder setProductWarehouses(List<ProductWarehouse> productWarehouses) {
+            this.productWarehouses = productWarehouses;
+            return this;
+        }
+
+        public Builder setId(Long id) {
+            this.id = id;
+            return this;
+        }
+
+        public Builder setDiscountCard(DiscountCard discountCard) {
+            this.discountCard = discountCard;
+            return this;
+        }
+
+        public Builder setCreateDate(Date createDate) {
+            this.createDate = createDate;
+            return this;
+        }
+
+        public Receipt build(){
+            return new Receipt(this);
+        }
+    }
+
 }

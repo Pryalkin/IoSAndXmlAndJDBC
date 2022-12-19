@@ -2,8 +2,11 @@ package service;
 
 import model.Receipt;
 
-public interface Service {
+import java.util.List;
+
+public interface ReceiptService {
 
     Receipt parseTheRequest(String[] message);
 
+    List<Receipt> getAll();
 }

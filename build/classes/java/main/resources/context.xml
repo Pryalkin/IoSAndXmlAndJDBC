@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="discountCardRepository" class="repository.impl.DiscountCardRepositoryImpl" factory-method="getInstance"/>
+    <bean id="productRepository" class="repository.impl.ProductRepositoryImpl"  factory-method="getInstance"/>
+    <bean id="receiptRepository" class="repository.impl.ReceiptRepositoryImpl"  factory-method="getInstance"/>
+    <bean id="productWarehouseRepository" class="repository.impl.ProductWarehouseRepositoryImpl"  factory-method="getInstance"/>
+
+    <bean id="productService" class="service.impl.ProductServiceImpl">
+        <constructor-arg name="productRepository" ref="productRepository"/>
+    </bean>
+    <bean id="discountCardService" class="service.impl.DiscountCardServiceImpl">
+        <constructor-arg name="discountCardRepository" ref="discountCardRepository"/>
+    </bean>
+    <bean id="receiptService" class="service.impl.ReceiptServiceImpl">
+        <constructor-arg name="receiptRepository" ref="receiptRepository"/>
+    </bean>
+    <bean id="productWarehouseService" class="service.impl.ProductWarehouseServiceImpl">
+        <constructor-arg name="productWarehouseRepository" ref="productWarehouseRepository"/>
+    </bean>
+
+</beans>
