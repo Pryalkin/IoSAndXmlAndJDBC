@@ -1,5 +1,7 @@
 package service.impl;
 
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import repository.ProductRepository;
 import service.ProductService;
 

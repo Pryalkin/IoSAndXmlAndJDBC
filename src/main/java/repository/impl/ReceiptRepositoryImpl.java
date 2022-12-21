@@ -1,61 +1,65 @@
 package repository.impl;
 
+import model.DiscountCard;
 import model.Receipt;
+import org.springframework.stereotype.Repository;
 import repository.ReceiptRepository;
-import xml.XMLParse;
-import xml.factory.ScoreXMLFactory;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Optional;
+import java.io.IOException;
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.*;
 
 public class ReceiptRepositoryImpl implements ReceiptRepository {
 
-    private static ReceiptRepository receiptRepository;
-    private static XMLParse<Receipt, Long> xmlParse = new ScoreXMLFactory().getXMLReceipt();
-    private Long id = 0L;
-    private Map<Long, Receipt> receipts = xmlParse.get();
+    private static Connection conn;
 
-    private ReceiptRepositoryImpl() {
-    }
+    static {
+        String url = null;
+        String username = null;
+        String password = null;
 
-    public static ReceiptRepository getInstance() {
-        if (receiptRepository == null) {
-            receiptRepository = new ReceiptRepositoryImpl();
-            return receiptRepository;
+        try(InputStream in = ReceiptRepository.class
+                .getClassLoader().getResourceAsStream("app.properties")){
+            Properties properties = new Properties();
+            properties.load(in);
+            url = properties.getProperty("url");
+            username = properties.getProperty("username");
+            password = properties.getProperty("password");
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return receiptRepository;
+
+        try{
+            Class.forName("org.postgresql.Driver");
+            conn = DriverManager.getConnection(url, username, password);
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public Receipt save(Receipt receipt) {
-        if (receipt.getId() == 0){
-            id++;
-            receipt.setId(id);
-            receipts.put(id, receipt);
-        } else {
-            receipts.remove(receipt.getId());
-            receipts.put(receipt.getId(), receipt);
-        }
-        setReceiptsInXML(receipts.values());
-        return receipt;
+
+        return null;
     }
 
     @Override
-    public Map<Long, Receipt> getAll() {
-        return receipts;
+    public List<Receipt> getAll() throws SQLException {
+        List<Receipt> receipts = new ArrayList<>();
+        PreparedStatement ps = conn.prepareStatement("select * from receipt");
+        return null;
     }
 
     @Override
-    public Optional<Receipt> getById(Long aLong) {
-        if (receipts.containsKey(id)){
-            return Optional.of(receipts.get(id));
-        }
+    public Optional<Receipt> getById(Integer id) {
+
         return Optional.empty();
     }
 
-    private void setReceiptsInXML(Collection<Receipt> receipts) {
-        xmlParse.set(receipts);
-    }
 }
 

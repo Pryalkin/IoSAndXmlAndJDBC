@@ -1,69 +1,89 @@
 package repository.impl;
 
 import model.DiscountCard;
+import model.Product;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import repository.DiscountCardRepository;
-import xml.XMLParse;
-import xml.factory.ScoreXMLFactory;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.sql.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class DiscountCardRepositoryImpl implements DiscountCardRepository {
 
-    private static DiscountCardRepository discountCardRepository;
-    private Long id = 0L;
-    private static XMLParse<DiscountCard, Long> xmlParse = new ScoreXMLFactory().getXMLDiscountCard();
-    private Map<Long, DiscountCard> discountCards = xmlParse.get();
+    private static Connection conn;
 
-    private DiscountCardRepositoryImpl() {
-    }
+    static {
+        String url = null;
+        String username = null;
+        String password = null;
 
-    public static DiscountCardRepository getInstance() {
-        if (discountCardRepository == null) {
-            discountCardRepository = new DiscountCardRepositoryImpl();
-            return discountCardRepository;
+        try(InputStream in = DiscountCardRepository.class
+                .getClassLoader().getResourceAsStream("app.properties")){
+            Properties properties = new Properties();
+            properties.load(in);
+            url = properties.getProperty("url");
+            username = properties.getProperty("username");
+            password = properties.getProperty("password");
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return discountCardRepository;
+
+        try{
+            Class.forName("org.postgresql.Driver");
+            conn = DriverManager.getConnection(url, username, password);
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
-    public DiscountCard save(DiscountCard discountCard) {
-        if (discountCard.getId() == 0){
-            id++;
-            discountCard.setId(id);
-            discountCards.put(id, discountCard);
-        } else {
-            discountCards.remove(discountCard.getId());
-            discountCards.put(discountCard.getId(), discountCard);
-        }
-        setDiscountCardInXML(discountCards.values());
+    public DiscountCard save(DiscountCard discountCard) throws SQLException {
+        PreparedStatement ps = conn.prepareStatement("INSERT INTO discount_card values (?, ?, ?)");
+        ps.setInt(1, discountCard.getId());
+        ps.setString(2, discountCard.getNumber());
+        ps.setDouble(3, discountCard.getDiscount());
+        ps.execute();
         return discountCard;
     }
 
     @Override
-    public Map<Long, DiscountCard> getAll() {
+    public List<DiscountCard> getAll() throws SQLException {
+        List<DiscountCard> discountCards = new ArrayList<>();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM discount_card");
+        ResultSet rs = ps.executeQuery();
+        while (rs.next()){
+            DiscountCard discountCard = new DiscountCard();
+            discountCard.setId(rs.getInt(1));
+            discountCard.setNumber(rs.getString(2));
+            discountCard.setDiscount(rs.getDouble(3));
+            discountCards.add(discountCard);
+        }
         return discountCards;
     }
 
     @Override
-    public Optional<DiscountCard> getById(Long aLong) {
-        if (discountCards.containsKey(aLong)){
-            return Optional.of(discountCards.get(aLong));
+    public Optional<DiscountCard> getById(Integer id) throws SQLException {
+        DiscountCard discountCard = new DiscountCard();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM discount_card WHERE id = ?");
+        ps.setInt(1, id);
+        ResultSet resultSet = ps.executeQuery();
+        if (resultSet.next()){
+            discountCard.setId(resultSet.getInt(1));
+            discountCard.setNumber(resultSet.getString(2));
+            discountCard.setDiscount(resultSet.getDouble(3));
         }
-        return Optional.empty();
-    }
-
-    private void setDiscountCardInXML(Collection<DiscountCard> discountCards) {
-        xmlParse.set(discountCards);
+        ps.close();
+        return Optional.of(discountCard);
     }
 
     @Override
     public Optional<DiscountCard> getByNameDiscountCard(String numberCard) {
-        List<DiscountCard> dis = discountCards.values().stream().filter(d -> Objects.equals(d.getNumber(), numberCard)).collect(Collectors.toList());
-        if (dis.isEmpty()){
-            return Optional.empty();
-        }
-        return Optional.of(dis.get(0));
+
+        return Optional.empty();
     }
 }
 

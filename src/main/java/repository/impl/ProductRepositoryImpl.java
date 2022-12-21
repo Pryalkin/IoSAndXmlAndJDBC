@@ -1,62 +1,87 @@
 package repository.impl;
 
+import model.DiscountCard;
 import model.Product;
+import org.springframework.stereotype.Repository;
+import repository.DiscountCardRepository;
 import repository.ProductRepository;
-import xml.XMLParse;
-import xml.factory.ScoreXMLFactory;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.io.IOException;
+import java.io.InputStream;
+import java.sql.*;
+import java.util.*;
 
 public class ProductRepositoryImpl implements ProductRepository {
 
-    private static ProductRepository productRepository;
-    private static XMLParse<Product, Long> xmlParse = new ScoreXMLFactory().getXMLProduct();
-    private Long id = 0L;
-    private Map<Long, Product> products = xmlParse.get();
+    private static Connection conn;
 
-    private ProductRepositoryImpl() {
-    }
+    static {
+        String url = null;
+        String username = null;
+        String password = null;
 
-    public static ProductRepository getInstance() {
-        if (productRepository == null) {
-            productRepository = new ProductRepositoryImpl();
-            return productRepository;
+        try(InputStream in = ProductRepository.class
+                .getClassLoader().getResourceAsStream("app.properties")){
+            Properties properties = new Properties();
+            properties.load(in);
+            url = properties.getProperty("url");
+            username = properties.getProperty("username");
+            password = properties.getProperty("password");
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return productRepository;
+
+        try{
+            Class.forName("org.postgresql.Driver");
+            conn = DriverManager.getConnection(url, username, password);
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
-    public Map<Long, Product> getAll() {
+    public List<Product> getAll() throws SQLException {
+        List<Product> products = new ArrayList<>();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM product");
+        ResultSet rs = ps.executeQuery();
+        while (rs.next()){
+            Product product = new Product();
+            product.setId(rs.getInt(1));
+            product.setName(rs.getString(2));
+            product.setPrice(rs.getDouble(3));
+            product.setPromotional(rs.getBoolean(4));
+            products.add(product);
+        }
         return products;
     }
 
     @Override
-    public Optional<Product> getById(Long aLong) {
-        if (products.containsKey(aLong)){
-            return Optional.of(products.get(aLong));
+    public Optional<Product> getById(Integer id) throws SQLException {
+        Product product = new Product();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM product WHERE id = ?");
+        ps.setInt(1, id);
+        ResultSet resultSet = ps.executeQuery();
+        if (resultSet.next()){
+            product.setId(resultSet.getInt(1));
+            product.setName(resultSet.getString(2));
+            product.setPrice(resultSet.getDouble(3));
+            product.setPromotional(resultSet.getBoolean(4));
         }
-        return Optional.empty();
+        ps.close();
+        return Optional.of(product);
     }
 
     @Override
-    public Product save(Product product) {
-        if (product.getId() == 0){
-            id++;
-            product.setId(id);
-            products.put(id, product);
-        } else {
-            products.remove(product.getId());
-            products.put(product.getId(), product);
-        }
-        setProductsInXML(products.values());
+    public Product save(Product product) throws SQLException {
+        PreparedStatement ps = conn.prepareStatement("INSERT INTO product values (?, ?, ?, ?)");
+        ps.setInt(1, product.getId());
+        ps.setString(2, product.getName());
+        ps.setDouble(3, product.getPrice());
+        ps.setBoolean(4, product.getPromotional());
+        ps.execute();
         return product;
     }
 
-    private void setProductsInXML(Collection<Product> products) {
-        xmlParse.set(products);
-    }
+
 }
