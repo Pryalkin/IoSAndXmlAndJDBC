@@ -1,26 +1,31 @@
 package model;
 
-import java.util.Objects;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 public class Product {
 
-    private Long id;
+    private Integer id;
     private String name;
     private Double price;
     private Boolean promotional;
 
-    private Product(Builder builder) {
-        this.id = builder.id;
-        this.name = builder.name;
-        this.price = builder.price;
-        this.promotional = builder.promotional;
+    public Product(Integer id, String name, Double price, Boolean promotional) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.promotional = promotional;
     }
 
-    public Long getId() {
+    public Product() {
+    }
+
+    public Integer getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -28,12 +33,24 @@ public class Product {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public Double getPrice() {
         return price;
     }
 
+    public void setPrice(Double price) {
+        this.price = price;
+    }
+
     public Boolean getPromotional() {
         return promotional;
+    }
+
+    public void setPromotional(Boolean promotional) {
+        this.promotional = promotional;
     }
 
     @Override
@@ -45,61 +62,4 @@ public class Product {
                 ", promotional=" + promotional +
                 '}';
     }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Product product = (Product) o;
-        return Objects.equals(id, product.id) && Objects.equals(name, product.name) && Objects.equals(price, product.price) && Objects.equals(promotional, product.promotional);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, name, price, promotional);
-    }
-
-    public static class Builder{
-        private Long id = 0L;
-        private String name = "Пустота";
-        private Double price = 0.0;
-        private Boolean promotional = false;
-
-        public Builder(Product product) {
-            this.id = product.id;
-            this.name = product.name;
-            this.price = product.price;
-            this.promotional = product.promotional;
-        }
-
-        public Builder() {
-        }
-
-        public Builder setId(Long id) {
-            this.id = id;
-            return  this;
-        }
-
-        public Builder setName(String name) {
-            this.name = name;
-            return this;
-
-        }
-
-        public Builder setPrice(Double price) {
-            this.price = price;
-            return this;
-        }
-
-        public Builder setPromotional(Boolean promotional) {
-            this.promotional = promotional;
-            return this;
-        }
-
-        public Product build(){
-            return new Product(this);
-        }
-
-    }
-
 }

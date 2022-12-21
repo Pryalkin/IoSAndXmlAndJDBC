@@ -1,7 +1,13 @@
 package config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import repository.DiscountCardRepository;
 import repository.ProductRepository;
 import repository.ProductWarehouseRepository;
@@ -19,28 +25,28 @@ import service.impl.ProductServiceImpl;
 import service.impl.ProductWarehouseServiceImpl;
 import service.impl.ReceiptServiceImpl;
 
-public class JavaConfig {
+public class JavaConfig{
 
     // Repository
 
     @Bean
     public DiscountCardRepository discountCardRepository(){
-        return DiscountCardRepositoryImpl.getInstance();
+        return new DiscountCardRepositoryImpl();
     }
 
     @Bean
     public ProductRepository productRepository(){
-        return ProductRepositoryImpl.getInstance();
+        return new ProductRepositoryImpl();
     }
 
     @Bean
     public ReceiptRepository receiptRepository(){
-        return ReceiptRepositoryImpl.getInstance();
+        return new ReceiptRepositoryImpl();
     }
 
     @Bean
     public ProductWarehouseRepository productWarehouseRepository(){
-        return ProductWarehouseRepositoryImpl.getInstance();
+        return new ProductWarehouseRepositoryImpl();
     }
 
     // Service

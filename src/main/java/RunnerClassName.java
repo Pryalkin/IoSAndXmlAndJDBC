@@ -2,201 +2,139 @@ import config.JavaConfig;
 import model.DiscountCard;
 import model.Product;
 import model.ProductWarehouse;
-import model.Receipt;
+import org.apache.ibatis.jdbc.ScriptRunner;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.stereotype.Component;
 import repository.DiscountCardRepository;
 import repository.ProductRepository;
 import repository.ProductWarehouseRepository;
 import repository.ReceiptRepository;
-import service.ReceiptService;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Properties;
 
+@Component
+@ComponentScan
 public class RunnerClassName {
 
-    private static String productCreation;
+    private static String ddlAuto;
+    private static Connection conn;
+
+    static {
+        String url = null;
+        String username = null;
+        String password = null;
+
+        try(InputStream in = ReceiptRepository.class
+                .getClassLoader().getResourceAsStream("app.properties")){
+            Properties properties = new Properties();
+            properties.load(in);
+            url = properties.getProperty("url");
+            username = properties.getProperty("username");
+            password = properties.getProperty("password");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try{
+            Class.forName("org.postgresql.Driver");
+            conn = DriverManager.getConnection(url, username, password);
+
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
 
     static {
         Properties properties = new Properties();
         try (InputStream in = RunnerClassName.class.getClassLoader().getResourceAsStream("resources/app.properties")){
             properties.load(in);
-            productCreation = properties.getProperty("productCreation");
+            ddlAuto = properties.getProperty("ddl-auto");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public static void main(String[] args) {
-        ApplicationContext context = new AnnotationConfigApplicationContext(JavaConfig.class);
-//        ApplicationContext context = new ClassPathXmlApplicationContext("context.xml");
-        methodProductCreation(context);
+    public static void main(String[] args) throws SQLException, FileNotFoundException {
+         ApplicationContext context = new AnnotationConfigApplicationContext(JavaConfig.class);
+//        ApplicationContext context = new ClassPathXmlApplicationContext("dispatcher-servlet.xml");
+//        createDB(context);
+    }
 
-        ReceiptService receiptService = context.getBean("receiptService", ReceiptService.class);
-        if (args.length == 0){
-            System.out.println("Запрос пустой!");
-        } else {
+    static void createDB(ApplicationContext context) throws SQLException, FileNotFoundException {
 
-            Receipt receipt = receiptService.parseTheRequest(args);
-            System.out.println("--------------------------------------------------------------");
-            System.out.println("DATE: " + receipt.getCreateDate());
-            String qty = "QTY |";
-            String description = "DESCRIPTION   |";
-            String price = "PRICE |";
-            String sum = "SUM   |";
-            String auction = "AUCTION |";
-            String discount = "DISCOUNT  |";
-            String total = "TOTAL ";
-            String line = qty + description + price + sum + auction + discount + total;
-            System.out.println(line);
-            receipt.getProductWarehouses().stream().forEach(pw -> {
-                StringBuilder sb = new StringBuilder();
-                double s = 0.0;
-
-                String testLine = String.valueOf(pw.getAmount());
-                int i = testLine.length();
-                sb.append(testLine);
-                for (int j = 0; j < qty.length()-i-1; j++) {
-                    sb.append(" ");
-                }
-                sb.append("|");
-
-                testLine = pw.getProduct().getName();
-                i = testLine.length()/2;
-                sb.append(testLine);
-                for (int j = 0; j < description.length()-i-1; j++) {
-                    sb.append(" ");
-                }
-                sb.append("|");
-
-                testLine =  String.valueOf(pw.getProduct().getPrice());
-                i = testLine.length();
-                sb.append(testLine);
-                for (int j = 0; j < price.length()-i-1; j++) {
-                    sb.append(" ");
-                }
-                sb.append("|");
-
-                s = pw.getAmount()*pw.getProduct().getPrice();
-                testLine =  String.valueOf(s);
-                i = testLine.length();
-                sb.append(testLine);
-                for (int j = 0; j < sum.length()-i-1; j++) {
-                    sb.append(" ");
-                }
-                sb.append("|");
-
-                if (pw.getProduct().getPromotional()){
-                    sb.append("Акция   ");
-                } else {
-                    sb.append("        ");
-                }
-                sb.append("|");
-
-                if (pw.getProduct().getPromotional() && pw.getAmount()>5){
-                    sb.append("-10%      ");
-                    s = s * 0.9;
-                } else sb.append("          ");
-                sb.append("|");
-
-                sb.append(String.format("%.2f", s));
-
-                System.out.println(sb);
-            });
-            System.out.println("--------------------------------------------------------------");
-            double t = receipt.getProductWarehouses().stream()
-                    .mapToDouble(pw -> {
-                        if (pw.getProduct().getPromotional()){
-                            return pw.getAmount()*pw.getProduct().getPrice()*0.9;
-                        }
-                        return pw.getAmount()*pw.getProduct().getPrice();
-                    })
-                    .sum();
-            System.out.println("Общая сумма: " + String.format("%.2f", t));
-            if (receipt.getDiscountCard() != null){
-                System.out.println("Была предъявлена скидочная карта : " + receipt.getDiscountCard().getNumber());
-                System.out.println("К ОПЛАТЕ: " +
-                                           String.format("%.2f",
-                                                         (t * ((100 - receipt.getDiscountCard().getDiscount())/100))));
-            } else System.out.println("К ОПЛАТЕ: " + String.format("%.2f", t));
+        try(Statement stmt = conn.createStatement();){
+            if (ddlAuto.equals("drop")){
+                ScriptRunner sr = new ScriptRunner(conn);
+                Reader reader = new BufferedReader(new FileReader("src/main/resources/drop_tables.sql"));
+                sr.runScript(reader);
+                System.out.println("Таблицы успешно удалены!");
+            } else if (ddlAuto.equals("create")){
+                ScriptRunner sr = new ScriptRunner(conn);
+                Reader reader = new BufferedReader(new FileReader("src/main/resources/create_tables.sql"));
+                sr.runScript(reader);
+                System.out.println("Таблицы успешно созданы!");
+            } else if(ddlAuto.equals("complete")){
+                createDiscountCard(context);
+                createProducts(context);
+                System.out.println("Таблицы успешно заполнены!");
+            } else System.out.println("Никаких обновлений не произошло!");
         }
-
     }
 
-    private static void methodProductCreation(ApplicationContext context) {
-        if (productCreation.equals("create")){
-            System.out.println("Данные пересозданы.");
-            Path pathDis = Paths.get("discount_card.xml");
-            Path pathPr = Paths.get("product.xml");
-            Path pathPw = Paths.get("product_warehouse.xml");
-            Path pathR = Paths.get("receipt.xml");
-            try {
-                if (Files.exists(pathDis)) Files.delete(pathDis);
-                if (Files.exists(pathPr)) Files.delete(pathPr);
-                if (Files.exists(pathPw)) Files.delete(pathPw);
-                if (Files.exists(pathR)) Files.delete(pathR);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            createProducts(context);
-            createDiscountCard(context);
-        } else if (productCreation.equals("update")){
-            System.out.println("Данные обновлены.");
-        } else System.out.println("Вы указали не верное значение в app.properties.");
-    }
-
-    private static void createDiscountCard(ApplicationContext context) {
+    private static void createDiscountCard(ApplicationContext context) throws SQLException {
         DiscountCardRepository discountCardRepository = context.getBean("discountCardRepository", DiscountCardRepository.class);
-        DiscountCard discountCard = new DiscountCard.Builder().setNumber("1234").setDiscount(5.0).build();
-        discountCard = discountCardRepository.save(discountCard);
-        discountCard = new DiscountCard.Builder().setNumber("1254").setDiscount(7.0).build();
-        discountCard = discountCardRepository.save(discountCard);
-        discountCard = new DiscountCard.Builder().setNumber("1634").setDiscount(10.3).build();
-        discountCard = discountCardRepository.save(discountCard);
+        DiscountCard discountCard = new DiscountCard(1, "1234", 5.0);
+        discountCardRepository.save(discountCard);
+        discountCard = new DiscountCard(2, "1254",7.0);
+        discountCardRepository.save(discountCard);
+        discountCard = new DiscountCard(3, "1634",10.3);
+        discountCardRepository.save(discountCard);
     }
 
-    private static void createProducts(ApplicationContext context) {
+    private static void createProducts(ApplicationContext context) throws SQLException {
         ProductRepository productRepository = context.getBean("productRepository", ProductRepository.class);
         ProductWarehouseRepository productWarehouseRepository = context.getBean("productWarehouseRepository", ProductWarehouseRepository.class);
 
-        Product product = new Product.Builder().setName("Шоколад").setPrice(2.34).build();
+        Product product = new Product(1, "Шоколад", 2.34, false);
         product = productRepository.save(product);
-        ProductWarehouse productWarehouse = new ProductWarehouse.Builder().setProduct(product).setAmount(17).build();
+        ProductWarehouse productWarehouse = new ProductWarehouse(1, product,17);
         productWarehouseRepository.save(productWarehouse);
 
-        product = new Product.Builder().setName("Макороны").setPrice(3.35).setPromotional(true).build();
+        product = new Product(2, "Макороны", 3.35, true);
         product = productRepository.save(product);
-        productWarehouse = new ProductWarehouse.Builder().setProduct(product).setAmount(11).build();
+        productWarehouse = new ProductWarehouse(2, product, 11);
         productWarehouseRepository.save(productWarehouse);
 
-        product = new Product.Builder().setName("Гречка").setPrice(4.19).setPromotional(true).build();
+        product = new Product(3, "Гречка", 4.19, true);
         product = productRepository.save(product);
-        productWarehouse = new ProductWarehouse.Builder().setProduct(product).setAmount(9).build();
+        productWarehouse = new ProductWarehouse(3, product, 9);
         productWarehouseRepository.save(productWarehouse);
 
-        product = new Product.Builder().setName("Молоко").setPrice(1.62).build();
+        product = new Product(4, "Молоко", 1.62, false);
         product = productRepository.save(product);
-        productWarehouse = new ProductWarehouse.Builder().setProduct(product).setAmount(12).build();
+        productWarehouse = new ProductWarehouse(4, product, 12);
         productWarehouseRepository.save(productWarehouse);
 
-        product = new Product.Builder().setName("Хлеб").setPrice(2.09).build();
+        product = new Product(5, "Хлеб", 2.09, false);
         product = productRepository.save(product);
-        productWarehouse = new ProductWarehouse.Builder().setProduct(product).setAmount(1).build();
+        productWarehouse = new ProductWarehouse(5, product, 1);
         productWarehouseRepository.save(productWarehouse);
 
-        product = new Product.Builder().setName("Масло").setPrice(4.11).build();
+        product = new Product(6, "Масло", 4.11, false);
         product = productRepository.save(product);
-        productWarehouse = new ProductWarehouse.Builder().setProduct(product).setAmount(6).build();
+        productWarehouse = new ProductWarehouse(6, product, 6);
         productWarehouseRepository.save(productWarehouse);
 
-        product = new Product.Builder().setName("Мороженое").setPrice(2.27).setPromotional(true).build();
+        product = new Product(7, "Мороженое", 2.27, true);
         product = productRepository.save(product);
-        productWarehouse = new ProductWarehouse.Builder().setProduct(product).setAmount(13).build();
+        productWarehouse = new ProductWarehouse(7, product, 13);
         productWarehouseRepository.save(productWarehouse);
     }
 }
